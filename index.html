@@ -133,6 +133,17 @@
       requestAnimationFrame(update);
     }
 
+    function boost() {
+      for (const b of balls) {
+        b.vy -= 5;
+      }
+    }
+
+    window.addEventListener('pointerdown', boost);
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space') boost();
+    });
+
     window.addEventListener('resize', resize);
     resize();
     update();
