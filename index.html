@@ -2,9 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Netlify placeholder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Hexagon</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    .hexagon {
+      width: 60vmin;
+      height: 60vmin;
+      position: relative;
+      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+      border: 4px solid #0ff;
+      box-shadow: 0 0 20px #0ff, inset 0 0 20px #0ff;
+      animation: spin 20s linear infinite;
+    }
+    .hexagon canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <h1>It works!</h1>
+  <div class="hexagon">
+    <canvas id="scene"></canvas>
+  </div>
+  <script>
+    const canvas = document.getElementById('scene');
+    const ctx = canvas.getContext('2d');
+
+    const HEX_POINTS = [
+      [0.25, 0],
+      [0.75, 0],
+      [1, 0.5],
+      [0.75, 1],
+      [0.25, 1],
+      [0, 0.5]
+    ];
+
+    let edges = [];
+    const balls = [];
+    const gravity = 0.2;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      edges = buildEdges(rect.width, rect.height);
+      balls.length = 0;
+      for (let i = 0; i < 20; i++) {
+        balls.push(createBall(rect.width, rect.height));
+      }
+    }
+
+    function buildEdges(w, h) {
+      const pts = HEX_POINTS.map(([px, py]) => ({ x: px * w, y: py * h }));
+      const eds = [];
+      for (let i = 0; i < pts.length; i++) {
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % pts.length];
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy);
+        const nx = dy / len;
+        const ny = -dx / len; // outward normal
+        const c = -(nx * p1.x + ny * p1.y);
+        eds.push({ nx, ny, c });
+      }
+      return eds;
+    }
+
+    function createBall(w, h) {
+      const r = 5 + Math.random() * 10;
+      let x, y;
+      do {
+        x = Math.random() * w;
+        y = Math.random() * h;
+      } while (!insideHex(x, y, r));
+      return {
+        x, y, r,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4
+      };
+    }
+
+    function insideHex(x, y, r) {
+      return edges.every(e => e.nx * x + e.ny * y + e.c <= -r);
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const b of balls) {
+        b.vy += gravity;
+        b.x += b.vx;
+        b.y += b.vy;
+        for (const e of edges) {
+          const dist = e.nx * b.x + e.ny * b.y + e.c;
+          if (dist > -b.r) {
+            const dot = b.vx * e.nx + b.vy * e.ny;
+            if (dot > 0) {
+              const pen = dist + b.r;
+              b.x -= e.nx * pen;
+              b.y -= e.ny * pen;
+              b.vx -= 2 * dot * e.nx;
+              b.vy -= 2 * dot * e.ny;
+              b.vx *= 0.9;
+              b.vy *= 0.9;
+            }
+          }
+        }
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fillStyle = '#0ff';
+        ctx.shadowColor = '#0ff';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+      }
+      requestAnimationFrame(update);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    update();
+  </script>
 </body>
 </html>
