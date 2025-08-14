@@ -56,6 +56,11 @@
     const balls = [];
     const gravity = 0.2;
 
+    function randomColor() {
+      const hue = Math.floor(Math.random() * 360);
+      return `hsl(${hue}, 100%, 50%)`;
+    }
+
     function resize() {
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width;
@@ -92,10 +97,27 @@
         y = Math.random() * h;
       } while (!insideHex(x, y, r));
       return {
-        x, y, r,
+        x,
+        y,
+        r,
         vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4
+        vy: (Math.random() - 0.5) * 4,
+        color: randomColor()
       };
+    }
+
+    function addBallAt(x, y) {
+      const r = 5 + Math.random() * 10;
+      if (insideHex(x, y, r)) {
+        balls.push({
+          x,
+          y,
+          r,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          color: randomColor()
+        });
+      }
     }
 
     function insideHex(x, y, r) {
@@ -125,8 +147,8 @@
         }
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#0ff';
-        ctx.shadowColor = '#0ff';
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
         ctx.shadowBlur = 10;
         ctx.fill();
       }
@@ -135,6 +157,10 @@
 
     window.addEventListener('resize', resize);
     resize();
+    canvas.addEventListener('pointerdown', e => {
+      const rect = canvas.getBoundingClientRect();
+      addBallAt(e.clientX - rect.left, e.clientY - rect.top);
+    });
     update();
   </script>
 </body>
