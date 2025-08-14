@@ -15,60 +15,49 @@
       color: #fff;
       overflow: hidden;
     }
-    .hexagon {
+    canvas {
       width: 60vmin;
       height: 60vmin;
-      position: relative;
-      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-      border: 4px solid #0ff;
-      box-shadow: 0 0 20px #0ff, inset 0 0 20px #0ff;
-      animation: spin 20s linear infinite;
-    }
-    .hexagon canvas {
-      width: 100%;
-      height: 100%;
       display: block;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div class="hexagon">
-    <canvas id="scene"></canvas>
-  </div>
+  <canvas id="scene"></canvas>
   <script>
     const canvas = document.getElementById('scene');
     const ctx = canvas.getContext('2d');
 
-    const HEX_POINTS = [
-      [0.25, 0],
-      [0.75, 0],
-      [1, 0.5],
-      [0.75, 1],
-      [0.25, 1],
-      [0, 0.5]
-    ];
-
-    let edges = [];
+    let w, h, cx, cy;
     const balls = [];
+    let edges = [];
+    const baseHex = [];
+    let angle = 0;
     const gravity = 0.2;
+    const spinSpeed = 0.01;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height;
-      edges = buildEdges(rect.width, rect.height);
+      w = canvas.width;
+      h = canvas.height;
+      cx = w / 2;
+      cy = h / 2;
+      const radius = Math.min(w, h) / 2 - 5;
+      baseHex.length = 0;
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i;
+        baseHex.push({ x: radius * Math.cos(a), y: radius * Math.sin(a) });
+      }
+      edges = buildEdges(baseHex.map(p => ({ x: cx + p.x, y: cy + p.y })));
       balls.length = 0;
       for (let i = 0; i < 20; i++) {
-        balls.push(createBall(rect.width, rect.height));
+        balls.push(createBall());
       }
     }
 
-    function buildEdges(w, h) {
-      const pts = HEX_POINTS.map(([px, py]) => ({ x: px * w, y: py * h }));
+    function buildEdges(pts) {
       const eds = [];
       for (let i = 0; i < pts.length; i++) {
         const p1 = pts[i];
@@ -77,22 +66,23 @@
         const dy = p2.y - p1.y;
         const len = Math.hypot(dx, dy);
         const nx = dy / len;
-        const ny = -dx / len; // outward normal
+        const ny = -dx / len;
         const c = -(nx * p1.x + ny * p1.y);
         eds.push({ nx, ny, c });
       }
       return eds;
     }
 
-    function createBall(w, h) {
-      const r = 5 + Math.random() * 10;
+    function createBall() {
+      const r = 5 + Math.random() * 15;
+      const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
       let x, y;
       do {
         x = Math.random() * w;
         y = Math.random() * h;
       } while (!insideHex(x, y, r));
       return {
-        x, y, r,
+        x, y, r, color,
         vx: (Math.random() - 0.5) * 4,
         vy: (Math.random() - 0.5) * 4
       };
@@ -102,8 +92,32 @@
       return edges.every(e => e.nx * x + e.ny * y + e.c <= -r);
     }
 
+    function rotatePoints() {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return baseHex.map(p => ({
+        x: cx + p.x * cos - p.y * sin,
+        y: cy + p.x * sin + p.y * cos
+      }));
+    }
+
     function update() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      angle += spinSpeed;
+      const pts = rotatePoints();
+      edges = buildEdges(pts);
+
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#0ff';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+
       for (const b of balls) {
         b.vy += gravity;
         b.x += b.vx;
@@ -125,8 +139,8 @@
         }
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#0ff';
-        ctx.shadowColor = '#0ff';
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
         ctx.shadowBlur = 10;
         ctx.fill();
       }
