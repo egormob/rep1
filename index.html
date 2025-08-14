@@ -34,7 +34,7 @@
     const baseHex = [];
     let angle = 0;
     const gravity = 0.2;
-    const spinSpeed = 0.01;
+    let spinSpeed = 0.01;
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -101,6 +101,14 @@
       }));
     }
 
+    function relaunch() {
+      for (const b of balls) {
+        b.vy = -5 - Math.random() * 5;
+        b.vx = (Math.random() - 0.5) * 4;
+      }
+      spinSpeed = -spinSpeed;
+    }
+
     function update() {
       angle += spinSpeed;
       const pts = rotatePoints();
@@ -146,6 +154,11 @@
       }
       requestAnimationFrame(update);
     }
+
+    canvas.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      relaunch();
+    });
 
     window.addEventListener('resize', resize);
     resize();
